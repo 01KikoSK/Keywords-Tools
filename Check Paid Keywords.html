@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Check Paid Keywords — Single File</title>
+<style>
+  :root {
+    --bg:#0b0f14; --panel:#10161c; --muted:#7c8aa0; --text:#e6edf3; --accent:#6aa3ff;
+    --accent2:#22c55e; --danger:#ef4444; --warn:#f59e0b; --border:#233142; --chip:#16202b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Apple Color Emoji","Segoe UI Emoji";}
+  header{position:sticky;top:0;z-index:5;padding:18px 16px 10px;border-bottom:1px solid var(--border);
+    background:linear-gradient(to bottom,#0b0f14,rgba(11,15,20,.85) 70%,transparent);backdrop-filter:blur(6px)}
+  header h1{margin:0;font-size:18px;letter-spacing:.3px}
+  header .sub{color:var(--muted);font-size:12px;margin-top:4px}
+  .container{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;padding:14px}
+  @media (max-width:1100px){.container{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:clip;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .card h2{margin:0;padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px;color:#c9d7e3}
+  .card .body{padding:10px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media (max-width:820px){.row{grid-template-columns:1fr}}
+  textarea{width:100%;min-height:180px;resize:vertical;color:var(--text);background:#0f151b;
+    border:1px solid var(--border);border-radius:8px;padding:10px;outline:none}
+  textarea:focus{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .input{display:flex;gap:8px;align-items:center;background:#0f151b;border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+  .input input{flex:1;border:none;background:transparent;outline:none;color:var(--text)}
+  .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#c9d7e3;user-select:none}
+  .switch input{appearance:none;width:38px;height:20px;background:#0f151b;border:1px solid var(--border);border-radius:999px;position:relative;cursor:pointer}
+  .switch input:checked{background:rgba(106,163,255,.25);border-color:var(--accent)}
+  .switch input::after{content:"";position:absolute;top:50%;left:2px;transform:translateY(-50%);width:14px;height:14px;background:#c9d7e3;border-radius:50%;transition:all .15s}
+  .switch input:checked::after{transform:translate(16px,-50%);background:#d6e3ff}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:var(--chip);border:1px solid var(--border);color:#c9d7e3;border-radius:100px;padding:5px 9px;font-size:12px}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  @media (max-width:1000px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:#0f151b;border:1px solid var(--border);border-radius:10px;padding:10px}
+  .metric .k{color:var(--muted);font-size:12px}
+  .metric .v{font-size:20px;margin-top:6px}
+  .footer{padding:10px;display:flex;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--border);background:#0f151b;color:var(--muted);font-size:12px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;background:#0f151b;color:#c9d7e3;border:1px solid var(--border);border-radius:8px;cursor:pointer}
+  .btn.primary{background:#143055;border-color:#275b9b;color:#d7e7ff}
+  .btn:hover{filter:brightness(1.05)}
+  .status{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 10px rgba(34,197,94,.5)}
+  .warn .dot{background:var(--danger);box-shadow:0 0 10px rgba(239,68,68,.5)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+  th{position:sticky;top:0;background:#0f151b;color:#cfe0ff;font-weight:600;z-index:1}
+  .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 8px;font-size:12px}
+  .sev-ERROR{background:rgba(239,68,68,.12);color:#ffb4b4;border:1px solid rgba(239,68,68,.35)}
+  .sev-WARN{background:rgba(245,158,11,.12);color:#ffe0a3;border:1px solid rgba(245,158,11,.35)}
+  .sev-INFO{background:rgba(59,130,246,.12);color:#b9d6ff;border:1px solid rgba(59,130,246,.35)}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .filters{display:flex;gap:10px;flex-wrap:wrap}
+  .help{color:#9ccaff;text-decoration:none;border-bottom:1px dashed #3a69a6}
+</style>
+</head>
+<body>
+<header>
+  <h1>Check Paid Keywords</h1>
+  <div class="sub">Paste your keywords and negatives. Instantly find duplicates, conflicts, match-type issues, brand leakage, and URL/UTM problems.</div>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h2>Inputs</h2>
+    <div class="body">
+      <div class="row">
+        <div>
+          <div class="chips">
+            <span class="chip">Keywords</span>
+            <span class="chip muted">CSV/TSV or one per line</span>
+          </div>
+          <textarea id="kw" placeholder="Accepted columns (any order): keyword, matchtype, campaign, adgroup, finalurl
+Examples:
+  Shoes, exact, Brand, Adidas - Shoes, https://example.com?utm_source=ads&utm_medium=cpc
+  &quot;running shoes&quot;, phrase, Brand, Nike - Running, https://example.com/running
+  [women boots], , Nonbrand, Boots, https://example.com/boots
+
+If no headers present, auto-detects by position."></textarea>
+        </div>
+        <div>
+          <div class="chips">
+            <span class="chip">Negatives</span>
+            <span class="chip muted">Optional (scoped)</span>
+          </div>
+          <textarea id="neg" placeholder="Accepted columns: negative/keyword, matchtype, scope, campaign, adgroup
+Examples:
+  free, broad, account
+  &quot;jobs&quot;, phrase, campaign, Nonbrand
+  [cheap], exact, adgroup, Boots"></textarea>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <div class="input" title="Comma-separated brand tokens (exact terms or phrases)">
+          <span class="muted">Brands:</span>
+          <input id="brands" type="text" placeholder="e.g., nike, adidas, brand-x" />
+        </div>
+        <div class="input" title="Comma-separated required UTM params to verify">
+          <span class="muted">Require UTM:</span>
+          <input id="utmReq" type="text" placeholder="e.g., utm_source, utm_medium, utm_campaign" value="utm_source, utm_medium, utm_campaign" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <div class="filters">
+          <label class="switch"><input id="useStop" type="checkbox" checked />Use stopwords in normalization</label>
+          <label class="switch"><input id="useStem" type="checkbox" />Light stemming</label>
+          <label class="switch"><input id="chkURL" type="checkbox" checked />Check Final URL</label>
+          <label class="switch"><input id="chkUTM" type="checkbox" checked />Check UTM params</label>
+          <label class="switch"><input id="chkBrand" type="checkbox" />Check brand leakage</label>
+          <label class="switch"><input id="chkLayer" type="checkbox" checked />Check match layering</label>
+          <label class="switch"><input id="chkNear" type="checkbox" />Check near‑duplicates</label>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="status" id="liveStatus"><span class="dot"></span><span>Live</span></div>
+      <div>
+        <button class="btn" id="copyBtn">Copy report</button>
+        <button class="btn primary" id="clearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Overview</h2>
+    <div class="body">
+      <div class="metrics">
+        <div class="metric"><div class="k">Keywords</div><div class="v" id="mKws">0</div></div>
+        <div class="metric"><div class="k">Negatives</div><div class="v" id="mNegs">0</div></div>
+        <div class="metric"><div class="k">Campaigns</div><div class="v" id="mCamps">0</div></div>
+        <div class="metric"><div class="k">Ad groups</div><div class="v" id="mAgs">0</div></div>
+        <div class="metric"><div class="k">Errors</div><div class="v" id="mErr">0</div></div>
+        <div class="metric"><div class="k">Warnings</div><div class="v" id="mWarn">0</div></div>
+        <div class="metric"><div class="k">Infos</div><div class="v" id="mInfo">0</div></div>
+        <div class="metric"><div class="k">Near‑dupes</div><div class="v" id="mNear">0</div></div>
+      </div>
+    </div>
+    <div class="footer small">
+      <div>Header auto‑detection supports: keyword, matchtype, campaign, adgroup, finalurl, scope. Match types: exact [ ], phrase " ", broad.</div>
+      <div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Issues</h2>
+    <div class="body">
+      <div class="filters" style="margin-bottom:8px">
+        <label class="switch"><input id="fErr" type="checkbox" checked />Show Errors</label>
+        <label class="switch"><input id="fWarn" type="checkbox" checked />Show Warnings</label>
+        <label class="switch"><input id="fInfo" type="checkbox" />Show Info</label>
+      </div>
+      <table id="issuesTbl">
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Issue</th>
+            <th>Keyword</th>
+            <th>Match</th>
+            <th>Campaign</th>
+            <th>Ad group</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="footer small">
+      <div>Tip: Use Brands to flag “brand” tokens. Negatives can be scoped at account, campaign, or ad group level.</div>
+      <div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Duplicate and overlap summary</h2>
+    <div class="body">
+      <table id="dupeTbl">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Count</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="footer small">
+      <div>Near‑duplicates use token similarity and containment; review before acting.</div>
+      <div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+
+  const els = {
+    kw: $('#kw'), neg: $('#neg'), brands: $('#brands'), utmReq: $('#utmReq'),
+    useStop: $('#useStop'), useStem: $('#useStem'), chkURL: $('#chkURL'), chkUTM: $('#chkUTM'),
+    chkBrand: $('#chkBrand'), chkLayer: $('#chkLayer'), chkNear: $('#chkNear'),
+    mKws: $('#mKws'), mNegs: $('#mNegs'), mCamps: $('#mCamps'), mAgs: $('#mAgs'),
+    mErr: $('#mErr'), mWarn: $('#mWarn'), mInfo: $('#mInfo'), mNear: $('#mNear'),
+    issuesTbody: $('#issuesTbl tbody'), dupeTbody: $('#dupeTbl tbody'),
+    copyBtn: $('#copyBtn'), clearBtn: $('#clearBtn'),
+    fErr: $('#fErr'), fWarn: $('#fWarn'), fInfo: $('#fInfo'), liveStatus: $('#liveStatus'),
+  };
+
+  // Stopwords (short)
+  const STOP = new Set("a,an,and,are,as,at,be,been,but,by,for,from,had,has,have,he,her,him,his,how,i,if,in,into,is,it,its,just,me,more,most,my,no,not,of,on,or,our,out,over,own,same,she,so,than,that,the,their,them,then,there,these,they,this,those,to,too,up,very,was,we,were,what,when,where,which,while,who,why,with,you,your".split(','));
+
+  // Unicode-aware tokenization
+  const WORD_RE_UNI = /[\p{L}\p{M}\p{N}]+(?:[+'’\-][\p{L}\p{M}\p{N}]+)*/gu;
+  const WORD_RE_ASCII = /[A-Za-z0-9]+(?:[+'\ -][A-Za-z0-9]+)*/g;
+  const uni = supportsUnicode();
+
+  function supportsUnicode(){ try{ new RegExp("\\p{L}","u"); return true } catch { return false } }
+
+  function tokenize(s){
+    const re = uni ? WORD_RE_UNI : WORD_RE_ASCII;
+    return (s.toLowerCase().match(re) || []);
+  }
+  function stripDiacritics(s){
+    try { return s.normalize('NFD').replace(/\p{M}+/gu,'') } catch { return s }
+  }
+  function lightStem(t){
+    if (t.length < 4) return t;
+    if (t.endsWith("ies") && t.length > 4) return t.slice(0,-3)+"y";
+    if (t.endsWith("sses")) return t.slice(0,-2);
+    if (t.endsWith("s") && !t.endsWith("ss")) return t.slice(0,-1);
+    if (t.endsWith("ing") && t.length > 5) return t.slice(0,-3);
+    if (t.endsWith("ed") && t.length > 4) return t.slice(0,-2);
+    return t;
+  }
+  function normTokens(s, useStop, useStem){
+    let toks = tokenize(stripDiacritics(s));
+    if (useStop) toks = toks.filter(t => !STOP.has(t));
+    if (useStem) toks = toks.map(lightStem);
+    return toks;
+  }
+  function jaccard(a, b){
+    const A = new Set(a), B = new Set(b);
+    const inter = [...A].filter(x => B.has(x)).length;
+    const union = new Set([...A, ...B]).size;
+    return union ? inter/union : 0;
+  }
+  function containsOrdered(hay, needle){
+    if (!needle.length) return false;
+    for (let i=0;i<=hay.length-needle.length;i++){
+      let ok = true;
+      for (let j=0;j<needle.length;j++) if (hay[i+j]!==needle[j]) { ok=false; break; }
+      if (ok) return true;
+    }
+    return false;
+  }
+  function containsUnorderedSuperset(hay, needle){
+    const H = new Set(hay);
+    for (const t of needle) if (!H.has(t)) return false;
+    return true;
+  }
+
+  // CSV/TSV parser (basic with quotes)
+  function parseTable(text){
+    text = text.replace(/\r\n/g,'\n').trim();
+    if (!text) return { headers:[], rows:[] };
+    const delim = detectDelim(text);
+    const rows = [];
+    let cur = [], val = '', inQ = false;
+    function pushVal(){ cur.push(val); val=''; }
+    function pushRow(){ rows.push(cur); cur = []; }
+    for (let i=0;i<text.length;i++){
+      const c = text[i];
+      if (c === '"'){
+        if (inQ && text[i+1] === '"'){ val+='"'; i++; }
+        else inQ = !inQ;
+      } else if (!inQ && (c === delim || c === '\n')){
+        pushVal(); if (c === '\n') pushRow();
+      } else {
+        val += c;
+      }
+    }
+    pushVal(); // last cell
+    if (cur.length) pushRow();
+    // Split by lines when no delim used
+    if (rows.length === 1 && rows[0].length === 1 && text.includes('\n')){
+      const lines = text.split('\n').map(x => [x]);
+      return { headers:[], rows: lines };
+    }
+    // Header detection
+    const hdrs = rows[0].map(h => h.trim());
+    let start = 1;
+    const headerLikely = hdrs.some(h => /keyword|match|campaign|ad.?group|final|url|scope|negative/i.test(h));
+    const headers = headerLikely ? hdrs : [];
+    if (!headerLikely) start = 0;
+    return { headers, rows: rows.slice(start) };
+  }
+  function detectDelim(text){
+    const sample = text.split('\n').slice(0,5).join('\n');
+    const c = (sample.match(/,/g)||[]).length;
+    const t = (sample.match(/\t/g)||[]).length;
+    const s = (sample.match(/;/g)||[]).length;
+    if (t >= c && t >= s) return '\t';
+    if (c >= s) return ',';
+    return ';';
+  }
+
+  function mapRow(headers, row, mode){
+    const idx = name => {
+      let i = headers.findIndex(h => h.toLowerCase().replace(/\s|_/g,'') === name);
+      if (i>=0) return i;
+      // aliases
+      const aliases = {
+        keyword:['kw','query','searchterm','negative'],
+        matchtype:['match','type','match_type'],
+        campaign:['camp','campaignname'],
+        adgroup:['adgroupname','ad group','adgroup id','adgroupname'],
+        finalurl:['url','final url','final','lp','landing','landingpage'],
+        scope:['level','negativescope']
+      };
+      for (const key in aliases){
+        if (key===name){
+          for (const alt of aliases[key]){
+            i = headers.findIndex(h => h.toLowerCase().replace(/\s|_/g,'') === alt);
+            if (i>=0) return i;
+          }
+        }
+      }
+      return -1;
+    };
+    const obj = {};
+    const kwI = idx('keyword');
+    obj.keyword = (row[kwI>=0?kwI:0] || '').trim();
+    const mtI = idx('matchtype');
+    obj.matchtype = (row[mtI>=0?mtI:1] || '').trim();
+    const campI = idx('campaign');
+    obj.campaign = (row[campI>=0?campI:2] || '').trim();
+    const agI = idx('adgroup');
+    obj.adgroup = (row[agI>=0?agI:3] || '').trim();
+    const urlI = idx('finalurl');
+    obj.finalurl = (row[urlI>=0?urlI:4] || '').trim();
+    const scopeI = idx('scope');
+    obj.scope = (row[scopeI>=0?scopeI:5] || '').trim();
+    obj.mode = mode;
+    return obj;
+  }
+
+  function detectMatchType(kw, explicit){
+    const e = explicit.toLowerCase();
+    if (e.includes('exact')) return 'exact';
+    if (e.includes('phrase')) return 'phrase';
+    if (e.includes('broad')) return 'broad';
+    if (/^\s*
+
+\[.*\]
+
+\s*$/.test(kw)) return 'exact';
+    if (/^\s*".*"\s*$/.test(kw)) return 'phrase';
+    return 'broad';
+  }
+  function cleanKeywordLiteral(kw){
+    kw = kw.trim();
+    if (kw.startsWith('[') && kw.endsWith(']')) return kw.slice(1,-1).trim();
+    if (kw.startsWith('"') && kw.endsWith('"')) return kw.slice(1,-1).trim();
+    return kw;
+  }
+
+  function parseAll(){
+    const kwTab = parseTable(els.kw.value);
+    const negTab = parseTable(els.neg.value);
+
+    const kws = kwTab.rows.map(r => mapRow(kwTab.headers, r, 'kw')).filter(r => r.keyword);
+    const negs = negTab.rows.map(r => mapRow(negTab.headers, r, 'neg')).filter(r => r.keyword);
+
+    const items = [];
+    let id = 1;
+
+    for (const r of kws){
+      const match = detectMatchType(r.keyword, r.matchtype||'');
+      const literal = cleanKeywordLiteral(r.keyword);
+      items.push({
+        id: id++,
+        keyword: literal,
+        match,
+        campaign: r.campaign || '',
+        adgroup: r.adgroup || '',
+        finalurl: r.finalurl || '',
+        isNegative: false,
+        scope: '',

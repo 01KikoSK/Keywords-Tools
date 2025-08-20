@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live Keyword Analyzer — Single File</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #10161c;
+    --muted: #7c8aa0;
+    --text: #e6edf3;
+    --accent: #6aa3ff;
+    --accent-2: #22c55e;
+    --danger: #ef4444;
+    --border: #233142;
+    --chip: #16202b;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, "Apple Color Emoji","Segoe UI Emoji";
+  }
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: linear-gradient(to bottom, #0b0f14, rgba(11,15,20,.85) 70%, transparent);
+    backdrop-filter: blur(6px);
+    padding: 18px 20px 10px; border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
+  header .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .container { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; padding: 16px; }
+  @media (max-width: 1100px){ .container { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: clip;
+    box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  }
+  .card h2 { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 14px; color: #c9d7e3; }
+  .card .body { padding: 12px; }
+  textarea {
+    width: 100%; min-height: 260px; resize: vertical; color: var(--text);
+    background: #0f151b; border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+    outline: none; box-shadow: inset 0 0 0 1px transparent; transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  @media (max-width: 680px){ .row { grid-template-columns: 1fr; } }
+  .input {
+    display: flex; gap: 8px; align-items: center; background: #0f151b; border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .input input[type="text"], .input input[type="number"] {
+    flex: 1; border: none; background: transparent; outline: none; color: var(--text);
+  }
+  .tagline { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .chip {
+    background: var(--chip); border: 1px solid var(--border); color: #c9d7e3; border-radius: 100px; padding: 5px 9px; font-size: 12px;
+  }
+  .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #c9d7e3; user-select: none; }
+  .switch input { appearance: none; width: 36px; height: 20px; background: #0f151b; border: 1px solid var(--border); border-radius: 999px; position: relative; outline: none; cursor: pointer; transition: all .15s ease; }
+  .switch input:checked { background: rgba(106,163,255,.25); border-color: var(--accent); }
+  .switch input::after { content: ""; position: absolute; top: 50%; left: 2px; transform: translateY(-50%); width: 14px; height: 14px; background: #c9d7e3; border-radius: 50%; transition: all .15s ease; }
+  .switch input:checked::after { transform: translate(16px, -50%); background: #d6e3ff; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 960px){ .metrics { grid-template-columns: repeat(2, 1fr); } }
+  .metric {
+    background: #0f151b; border: 1px solid var(--border); border-radius: 10px; padding: 10px;
+  }
+  .metric .k { color: var(--muted); font-size: 12px; }
+  .metric .v { font-size: 20px; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  th { position: sticky; top: 0; background: #0f151b; color: #cfe0ff; font-weight: 600; }
+  .pctBar {
+    height: 8px; background: #0f151b; border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
+  }
+  .pctBar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #9cd1ff); }
+  .muted { color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 1000px){ .grid2 { grid-template-columns: 1fr; } }
+  canvas { width: 100%; height: 240px; background: #0f151b; border: 1px solid var(--border); border-radius: 10px; }
+  .footer {
+    padding: 10px 12px; display: flex; gap: 8px; align-items: center; justify-content: space-between;
+    border-top: 1px solid var(--border); background: #0f151b; color: var(--muted); font-size: 12px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px;
+    background: #0f151b; color: #c9d7e3; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+  }
+  .btn.primary { background: #143055; border-color: #275b9b; color: #d7e7ff; }
+  .btn:hover { filter: brightness(1.05); }
+  .status { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 10px rgba(34,197,94,.5); }
+  .warn .dot { background: var(--danger); box-shadow: 0 0 10px rgba(239,68,68,.5); }
+  .small { font-size: 12px; }
+  .a { color: #9ccaff; text-decoration: none; border-bottom: 1px dashed #3a69a6; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Live Keyword Analyzer</h1>
+    <div class="sub">Paste or type your text. Insights update as you write — keyword density, top terms, n‑grams, readability, and more.</div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>Text</h2>
+      <div class="body">
+        <textarea id="text" placeholder="Paste your content here..."></textarea>
+        <div class="row">
+          <div class="input" title="Track specific keywords (comma-separated)">
+            <span class="muted">Track:</span>
+            <input id="track" type="text" placeholder="e.g., coffee beans, espresso, grinder" />
+          </div>
+          <div class="input" title="Custom stopwords (comma-separated). Leave blank to use default English list.">
+            <span class="muted">Stopwords:</span>
+            <input id="stop" type="text" placeholder="Optional: add/remove stopwords" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <label class="switch"><input id="useStop" type="checkbox" checked />Use stopwords</label>
+          <label class="switch"><input id="useStem" type="checkbox" />Light stemming</label>
+        </div>
+        <div class="tagline">Tips: Toggle stopwords for discovery vs density. Add tracked keywords to monitor exact-match density and proximity.</div>
+      </div>
+      <div class="footer">
+        <div class="status"><span class="dot" id="liveDot"></span><span id="liveTxt">Live</span></div>
+        <div>
+          <button class="btn" id="copyBtn" title="Copy the current metrics as text">Copy report</button>
+          <button class="btn primary" id="clearBtn">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Overview</h2>
+      <div class="body">
+        <div class="metrics">
+          <div class="metric">
+            <div class="k">Words</div>
+            <div class="v" id="mWords">0</div>
+          </div>
+          <div class="metric">
+            <div class="k">Unique</div>
+            <div class="v" id="mUnique">0</div>
+          </div>
+          <div class="metric">
+            <div class="k">Sentences</div>
+            <div class="v" id="mSent">0</div>
+          </div>
+          <div class="metric">
+            <div class="k">Read time</div>
+            <div class="v" id="mRead">0s</div>
+          </div>
+          <div class="metric">
+            <div class="k">Flesch Ease</div>
+            <div class="v" id="mFRE">–</div>
+          </div>
+          <div class="metric">
+            <div class="k">FK Grade</div>
+            <div class="v" id="mFKG">–</div>
+          </div>
+          <div class="metric">
+            <div class="k">Characters</div>
+            <div class="v" id="mChars">0</div>
+          </div>
+          <div class="metric">
+            <div class="k">Paragraphs</div>
+            <div class="v" id="mPara">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer small">
+        <div>Flesch and grade are rough estimates based on English heuristics.</div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tracked keywords</h2>
+      <div class="body">
+        <table id="trackedTbl">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Count</th>
+              <th>Density</th>
+              <th>First seen</th>
+              <th>Avg distance</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="footer small">
+        <div>Density = count / total words. Avg distance between repeated occurrences (tokens).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Top keywords</h2>
+      <div class="body">
+        <div class="grid2">
+          <div>
+            <table id="topTbl">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Term</th>
+                  <th>Freq</th>
+                  <th>Share</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div>
+            <canvas id="chart" width="640" height="260"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="footer small">
+        <div>Top terms computed after normalization and optional stopword removal.</div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>N‑grams</h2>
+      <div class="body">
+        <div class="grid2">
+          <div>
+            <div class="chips"><span class="chip">Bigrams</span></div>
+            <table id="biTbl">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Bigram</th>
+                  <th>Freq</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div>
+            <div class="chips"><span class="chip">Trigrams</span></div>
+            <table id="triTbl">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Trigram</th>
+                  <th>Freq</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="footer small">
+        <div>Generated from token stream after stopword filtering.</div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+  const els = {
+    text: $('#text'),
+    track: $('#track'),
+    stop: $('#stop'),
+    useStop: $('#useStop'),
+    useStem: $('#useStem'),
+    mWords: $('#mWords'),
+    mUnique: $('#mUnique'),
+    mSent: $('#mSent'),
+    mRead: $('#mRead'),
+    mFRE: $('#mFRE'),
+    mFKG: $('#mFKG'),
+    mChars: $('#mChars'),
+    mPara: $('#mPara'),
+    trackedTbl: $('#trackedTbl tbody'),
+    topTbl: $('#topTbl tbody'),
+    biTbl: $('#biTbl tbody'),
+    triTbl: $('#triTbl tbody'),
+    chart: $('#chart'),
+    liveDot: $('#liveDot'),
+    liveTxt: $('#liveTxt'),
+    copyBtn: $('#copyBtn'),
+    clearBtn: $('#clearBtn'),
+  };
+
+  // Default English stopwords (trimmed list)
+  const DEFAULT_STOP = new Set((
+    "a,an,and,are,as,at,be,been,but,by,for,from,had,has,have,he,her,here,hers,herself,him,himself,his,how,i,if,in,into,is,it,its,itself,just,me,more,most,my,myself,no,not,of,on,once,only,or,other,our,ours,ourselves,out,over,own,same,she,should,so,some,such,than,that,the,their,theirs,them,themselves,then,there,these,they,this,those,through,to,too,under,until,up,very,was,we,were,what,when,where,which,while,who,whom,why,with,without,you,your,yours,yourself,yourselves,can,will,do,does,did,been,being,again,against,also,any,each,ever,every,between,about,because,before,after,above,below,during,off,doing,don,doesn,won,t,don’t,can’t,shouldn’t,wasn’t,weren’t,doesn’t,isn’t,aren’t,won’t"
+  ).split(',').map(w => w.trim().toLowerCase()));
+
+  // Light stemming: very small heuristic stemmer to reduce plurals/ing/ed
+  function lightStem(t) {
+    // do not stem very short tokens
+    if (t.length < 4) return t;
+    // common endings
+    if (t.endsWith("ies") && t.length > 4) return t.slice(0, -3) + "y";
+    if (t.endsWith("sses")) return t.slice(0, -2);
+    if (t.endsWith("s") && !t.endsWith("ss")) return t.slice(0, -1);
+    if (t.endsWith("ing") && t.length > 5) return t.slice(0, -3);
+    if (t.endsWith("ed") && t.length > 4) return t.slice(0, -2);
+    return t;
+  }
+
+  // Tokenizer with Unicode support (letters, marks, digits inside words)
+  const WORD_RE_UNI = /[\p{L}\p{M}\p{N}]+(?:['’\-][\p{L}\p{M}\p{N}]+)*/gu;
+  const WORD_RE_ASCII = /[A-Za-z0-9]+(?:['\-][A-Za-z0-9]+)*/g;
+  function tokenize(text) {
+    const re = supportsUnicode() ? WORD_RE_UNI : WORD_RE_ASCII;
+    return (text.toLowerCase().match(re) || []);
+  }
+  function supportsUnicode() {
+    try { new RegExp("\\p{L}", "u"); return true; } catch { return false; }
+  }
+
+  function sentences(text) {
+    // naive split by sentence-ending punctuation
+    const parts = text
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[\.!\?])\s+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    return parts;
+  }
+  function paragraphs(text) {
+    return text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  }
+
+  // Syllable estimator for English (heuristic)
+  function countSyllables(word) {
+    const w = word.toLowerCase().replace(/[^a-z]/g, '');
+    if (!w) return 0;
+    if (w.length <= 3) return 1;
+    const sub = w
+      .replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/g, '')
+      .replace(/^y/, '');
+    const matches = sub.match(/[aeiouy]{1,2}/g);
+    return Math.max(1, matches ? matches.length : 1);
+  }
+
+  function unique(arr) { return Array.from(new Set(arr)); }
+
+  function buildStopset(custom, enabled) {
+    if (!enabled) return new Set();
+    const s = new Set(DEFAULT_STOP);
+    const add = (custom || "").split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+    // Custom list acts as overrides: prefix with + to force-include, - to remove
+    for (const t of add) {
+      if (t.startsWith('+')) { s.delete(t.slice(1)); continue; }
+      if (t.startsWith('-')) { s.add(t.slice(1)); continue; }
+      s.add(t);
+    }
+    return s;
+  }
+
+  function freqMap(tokens, useStem) {
+    const map = new Map();
+    for (let t of tokens) {
+      const k = useStem ? lightStem(t) : t;
+      map.set(k, (map.get(k) || 0) + 1);
+    }
+    return map;
+  }
+
+  function topN(map, n) {
+    return Array.from(map.entries()).sort((a,b) => b[1]-a[1]).slice(0, n);
+  }
+
+  function ngrams(tokens, n) {
+    const map = new Map();
+    for (let i=0; i<=tokens.length - n; i++) {
+      const gram = tokens.slice(i, i+n).join(' ');
+      map.set(gram, (map.get(gram) || 0) + 1);
+    }
+    return topN(map, 20);
+  }
+
+  function trackedStats(tokens, trackedList) {
+    const stats = [];
+    if (!trackedList.length) return stats;
+    const joined = tokens;
+    const textLen = joined.length;
+    for (const raw of trackedList) {
+      const kw = raw.trim().toLowerCase();
+      if (!kw) continue;
+      const parts = kw.split(/\s+/);
+      let count = 0;
+      let first = -1;
+      const positions = [];
+      // exact token sequence match
+      for (let i=0; i<=joined.length - parts.length; i++) {
+        let ok = true;
+        for (let j=0; j<parts.length; j++) {
+          if (joined[i+j] !== parts[j]) { ok = false; break; }
+        }
+        if (ok) {
+          count++;
+          if (first === -1) first = i+1; // 1-based token index
+          positions.push(i);
+        }
+      }
+      // average distance between consecutive occurrences
+      let avgDist = "–";
+      if (positions.length > 1) {
+        let sum = 0;
+        for (let k=1; k<positions.length; k++) sum += (positions[k] - positions[k-1]);
+        avgDist = (sum / (positions.length - 1)).toFixed(1);
+      }
+      stats.push({
+        kw: raw.trim(),
+        count,
+        density: textLen ? (count / textLen) : 0,
+        first: first === -1 ? "–" : first.toString(),
+        avgDist
+      });
+    }
+    return stats;
+  }
+
+  function drawChart(canvas, data) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    // clear
+    ctx.fillStyle = '#0f151b'; ctx.fillRect(0,0,W,H);
+    // axes
+    const padL = 60, padR = 20, padB = 36, padT = 10;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    ctx.strokeStyle = '#233142'; ctx.lineWidth = 1;
+    ctx.strokeRect(padL, padT, cw, ch);
+    // ticks
+    const maxVal = Math.max(1, ...data.map(d => d.value));
+    const bars = data.length;
+    const barW = Math.max(8, cw / Math.max(1, bars) * 0.6);
+    const gap = bars ? (cw - bars * barW) / Math.max(1, bars + 1) : 0;
+
+    // y labels
+    ctx.fillStyle = '#7c8aa0'; ctx.font = '12px ui-sans-serif';
+    for (let i=0;i<=4;i++){
+      const v = Math.round(maxVal * i / 4);
+      const y = padT + ch - (ch * i/4);
+      ctx.fillText(v.toString(), 8, y+4);
+      ctx.strokeStyle = 'rgba(35,49,66,0.6)'; ctx.beginPath();
+      ctx.moveTo(padL, y); ctx.lineTo(W-padR, y); ctx.stroke();
+    }
+
+    // bars
+    let x = padL + gap;
+    for (const d of data) {
+      const h = ch * (d.value / maxVal);
+      const y = padT + ch - h;
+      const grad = ctx.createLinearGradient(0, y, 0, y+h);
+      grad.addColorStop(0, '#6aa3ff');
+      grad.addColorStop(1, '#9cd1ff');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, barW, h);
+      // label
+      ctx.save();
+      ctx.translate(x + barW/2, H - padB + 4);
+      ctx.rotate(-Math.PI/6);
+      ctx.fillStyle = '#cfe0ff';
+      ctx.textAlign = 'center';
+      ctx.font = '12px ui-sans-serif';
+      const label = d.label.length > 12 ? d.label.slice(0, 11) + '…' : d.label;
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+      // value
+      ctx.fillStyle = '#d7e7ff';
+      ctx.font = '12px ui-sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(d.value.toString(), x + barW/2, y - 4);
+      x += barW + gap;
+    }
+  }
+
+  function formatPct(p){ return (p*100).toFixed(p*100 >= 10 ? 1 : 2) + '%'; }
+
+  // Debounce
+  let raf = 0;
+  function scheduleUpdate() {
+    cancelAnimationFrame(raf);
+    els.liveTxt.textContent = 'Typing…';
+    raf = requestAnimationFrame(updateAll);
+  }
+
+  function updateAll() {
+    const raw = els.text.value || '';
+    const toksRaw = tokenize(raw);
+    const useStem = els.useStem.checked;
+    const stopset = buildStopset(els.stop.value, els.useStop.checked);
+
+    const tokens = toksRaw
+      .map(t => t.normalize ? t.normalize('NFKC') : t)
+      .filter(t => !stopset.has(t))
+      .map(t => useStem ? lightStem(t) : t);
+
+    // Basic metrics
+    const chars = raw.length;
+    const sents = sentences(raw);
+    const paras = paragraphs(raw);
+    const words = toksRaw.length;
+    const uniq = unique(tokens).length;
+    const syllables = toksRaw.reduce((sum, w) => sum + countSyllables(w), 0);
+
+    // Readability (Flesch Reading Ease and F-K Grade)
+    const S = sents.length || 1;
+    const W = Math.max(1, toksRaw.length);
+    const syl = Math.max(1, syllables);
+    const FRE = 206.835 - 1.015 * (W / S) - 84.6 * (syl / W);
+    const FKG = 0.39 * (W / S) + 11.8 * (syl / W) - 15.59;
+
+    els.mWords.textContent = words.toLocaleString();
+    els.mUnique.textContent = uniq.toLocaleString();
+    els.mSent.textContent = sents.length.toLocaleString();
+    els.mRead.textContent = words === 0 ? '0s' : (words < 40 ? '~10s' : ~((words/200)*60) + 's').replace('~','');
+    els.mFRE.textContent = isFinite(FRE) ? FRE.toFixed(1) : '–';
+    els.mFKG.textContent = isFinite(FKG) ? FKG.toFixed(1) : '–';
+    els.mChars.textContent = chars.toLocaleString();
+    els.mPara.textContent = paras.length.toLocaleString();
+
+    // Top keywords
+    const freq = freqMap(tokens, false);
+    const top = topN(freq, 20);
+    els.topTbl.innerHTML = top.map((entry, idx) => {
+      const [term, count] = entry;
+      const share = words ? count / words : 0;
+      const barW = Math.max(1, Math.round(share * 100));
+      return `<tr>
+        <td>${idx+1}</td>
+        <td>${escapeHtml(term)}</td>
+        <td>${count}</td>
+        <td style="min-width:140px">
+          <div class="pctBar"><span style="width:${barW}%"></span></div>
+          <div class="muted small">${formatPct(share)}</div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // Chart
+    drawChart(els.chart, top.slice(0, 10).map(([label, value]) => ({label, value})));
+
+    // N-grams from filtered tokens
+    const bi = ngrams(tokens, 2);
+    const tri = ngrams(tokens, 3);
+    els.biTbl.innerHTML = bi.map((entry, idx) => {
+      const [gram, count] = entry;
+      return `<tr><td>${idx+1}</td><td>${escapeHtml(gram)}</td><td>${count}</td></tr>`;
+    }).join('');
+    els.triTbl.innerHTML = tri.map((entry, idx) => {
+      const [gram, count] = entry;
+      return `<tr><td>${idx+1}</td><td>${escapeHtml(gram)}</td><td>${count}</td></tr>`;
+    }).join('');
+
+    // Tracked keywords (exact matches on original tokens)
+    const trackedList = (els.track.value || '').split(',').map(s => s.trim()).filter(Boolean);
+    const tracked = trackedStats(toksRaw, trackedList);
+    els.trackedTbl.innerHTML = tracked.map(item => {
+      return `<tr>
+        <td>${escapeHtml(item.kw)}</td>
+        <td>${item.count}</td>
+        <td>${formatPct(item.density)}</td>
+        <td>${item.first}</td>
+        <td>${item.avgDist}</td>
+      </tr>`;
+    }).join('');
+
+    els.liveTxt.textContent = 'Live';
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // Copy report
+  els.copyBtn.addEventListener('click', () => {
+    const rows = [];
+    const getText = el => el.textContent.trim();
+    rows.push(`# Overview
+- Words: ${getText(els.mWords)}
+- Unique: ${getText(els.mUnique)}
+- Sentences: ${getText(els.mSent)}
+- Paragraphs: ${getText(els.mPara)}
+- Characters: ${getText(els.mChars)}
+- Read time: ${getText(els.mRead)}
+- Flesch Reading Ease: ${getText(els.mFRE)}
+- Flesch-Kincaid Grade: ${getText(els.mFKG)}
+
+# Tracked keywords`);
+    $$('#trackedTbl tbody tr').forEach(tr => {
+      const tds = Array.from(tr.children).map(td => td.textContent.trim());
+      rows.push(`- ${tds[0]} | Count: ${tds[1]} | Density: ${tds[2]} | First: ${tds[3]} | Avg dist: ${tds[4]}`);
+    });
+    rows.push(`\n# Top keywords`);
+    $$('#topTbl tbody tr').forEach(tr => {
+      const tds = Array.from(tr.children).map(td => td.textContent.trim());
+      rows.push(`- ${tds[1]} | Freq: ${tds[2]} | Share: ${tds[3]}`);
+    });
+    rows.push(`\n# Bigrams`);
+    $$('#biTbl tbody tr').forEach(tr => {
+      const tds = Array.from(tr.children).map(td => td.textContent.trim());
+      rows.push(`- ${tds[1]} | ${tds[2]}`);
+    });
+    rows.push(`\n# Trigrams`);
+    $$('#triTbl tbody tr').forEach(tr => {
+      const tds = Array.from(tr.children).map(td => td.textContent.trim());
+      rows.push(`- ${tds[1]} | ${tds[2]}`);
+    });
+
+    const text = rows.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      pulseStatus(true);
+    }).catch(() => {
+      pulseStatus(false);
+    });
+  });
+
+  function pulseStatus(ok) {
+    const el = els.liveDot;
+    el.classList.toggle('warn', !ok);
+    el.animate(
+      [{ transform: 'scale(1)', filter: 'brightness(1)' },
+       { transform: 'scale(1.5)', filter: 'brightness(1.6)' },
+       { transform: 'scale(1)', filter: 'brightness(1)' }],
+      { duration: 600, easing: 'ease-out' }
+    );
+  }
+
+  // Clear
+  els.clearBtn.addEventListener('click', () => {
+    els.text.value = '';
+    els.track.value = '';
+    els.stop.value = '';
+    scheduleUpdate();
+  });
+
+  // Live update listeners
+  ['input','change','keyup','paste'].forEach(evt => {
+    els.text.addEventListener(evt, scheduleUpdate);
+    els.track.addEventListener(evt, scheduleUpdate);
+    els.stop.addEventListener(evt, scheduleUpdate);
+    els.useStop.addEventListener(evt, scheduleUpdate);
+    els.useStem.addEventListener(evt, scheduleUpdate);
+  });
+
+  // Initial
+  scheduleUpdate();
+})();
+</script>
+</body>
+</html>
+```

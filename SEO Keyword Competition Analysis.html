@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SEO Keyword Competition Analysis — Single File</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#10161c; --muted:#7c8aa0; --text:#e6edf3; --accent:#6aa3ff; --accent2:#22c55e;
+    --danger:#ef4444; --warn:#f59e0b; --border:#233142; --chip:#16202b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Apple Color Emoji","Segoe UI Emoji";}
+  header{position:sticky;top:0;z-index:5;padding:18px 16px 10px;border-bottom:1px solid var(--border);
+    background:linear-gradient(to bottom,#0b0f14,rgba(11,15,20,.85) 70%,transparent);backdrop-filter:blur(6px)}
+  header h1{margin:0;font-size:18px;letter-spacing:.3px}
+  header .sub{color:var(--muted);font-size:12px;margin-top:4px}
+  .container{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;padding:14px}
+  @media (max-width:1150px){.container{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:clip;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .card h2{margin:0;padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px;color:#c9d7e3}
+  .card .body{padding:10px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media (max-width:820px){.row{grid-template-columns:1fr}}
+  .input{display:flex;gap:8px;align-items:center;background:#0f151b;border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+  .input input{flex:1;border:none;background:transparent;outline:none;color:var(--text)}
+  textarea{width:100%;min-height:180px;resize:vertical;color:var(--text);background:#0f151b;
+    border:1px solid var(--border);border-radius:8px;padding:10px;outline:none}
+  textarea:focus{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:var(--chip);border:1px solid var(--border);color:#c9d7e3;border-radius:100px;padding:5px 9px;font-size:12px}
+  .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#c9d7e3;user-select:none}
+  .switch input{appearance:none;width:38px;height:20px;background:#0f151b;border:1px solid var(--border);border-radius:999px;position:relative;cursor:pointer}
+  .switch input:checked{background:rgba(106,163,255,.25);border-color:var(--accent)}
+  .switch input::after{content:"";position:absolute;top:50%;left:2px;transform:translateY(-50%);width:14px;height:14px;background:#c9d7e3;border-radius:50%;transition:all .15s}
+  .switch input:checked::after{transform:translate(16px,-50%);background:#d6e3ff}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  @media (max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:#0f151b;border:1px solid var(--border);border-radius:10px;padding:10px}
+  .metric .k{color:var(--muted);font-size:12px}
+  .metric .v{font-size:20px;margin-top:6px}
+  .footer{padding:10px;display:flex;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--border);background:#0f151b;color:var(--muted);font-size:12px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;background:#0f151b;color:#c9d7e3;border:1px solid var(--border);border-radius:8px;cursor:pointer}
+  .btn.primary{background:#143055;border-color:#275b9b;color:#d7e7ff}
+  .btn:hover{filter:brightness(1.05)}
+  .status{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 10px rgba(34,197,94,.5)}
+  .warn .dot{background:var(--danger);box-shadow:0 0 10px rgba(239,68,68,.5)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+  th{position:sticky;top:0;background:#0f151b;color:#cfe0ff;font-weight:600;z-index:1}
+  .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 8px;font-size:12px}
+  .sev-STRONG{background:rgba(239,68,68,.12);color:#ffb4b4;border:1px solid rgba(239,68,68,.35)}
+  .sev-MED{background:rgba(245,158,11,.12);color:#ffe0a3;border:1px solid rgba(245,158,11,.35)}
+  .sev-EASY{background:rgba(34,197,94,.12);color:#b9f6c3;border:1px solid rgba(34,197,94,.35)}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .pill{display:inline-flex;gap:6px;align-items:center;background:#112131;border:1px solid #26445f;color:#cfe0ff;border-radius:999px;padding:5px 10px;margin:3px;font-size:12px}
+  .int-intent{background:#142b1d;border-color:#254f36}
+  .int-comm{background:#251a12;border-color:#50361f}
+  .int-tran{background:#221528;border-color:#4a2b5c}
+  .pctBar{height:8px;background:#0f151b;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+  .pctBar>span{display:block;height:100%;background:linear-gradient(90deg,#6aa3ff,#9cd1ff)}
+  canvas{width:100%;height:240px;background:#0f151b;border:1px solid var(--border);border-radius:10px}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media (max-width:900px){.kv{grid-template-columns:1fr}}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:1100px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>SEO Keyword Competition Analysis</h1>
+  <div class="sub">Paste SERP titles and URLs (CSV/TSV or free text). Get difficulty, intent, competitor strength, modifiers, and gaps — all offline.</div>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h2>Inputs</h2>
+    <div class="body">
+      <div class="row">
+        <div class="input"><span class="muted">Keyword:</span><input id="kw" type="text" placeholder="e.g., best espresso machine for home" /></div>
+        <div class="input" title="Optional: comma-separated brand tokens to detect branded SERPs">
+          <span class="muted">Brands:</span><input id="brands" type="text" placeholder="e.g., breville, delonghi, gaggia" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div>
+          <div class="chips">
+            <span class="chip">SERP snapshot</span>
+            <span class="chip muted">CSV/TSV or raw</span>
+          </div>
+          <textarea id="serp" placeholder="Paste top results (any of these formats):
+1) CSV with headers: position,title,url
+2) TSV with headers: pos  title  url
+3) Raw lines like:
+1. Best Espresso Machines for Home (2025) – Wirecutter
+https://www.nytimes.com/wirecutter/reviews/best-espresso-machine/
+Breville Barista Express Review: Is It Worth It?
+https://www.example.com/breville-barista-express-review"></textarea>
+        </div>
+        <div>
+          <div class="chips">
+            <span class="chip">Optional metrics CSV</span>
+            <span class="chip muted">url, dr, backlinks, traffic, wordcount</span>
+          </div>
+          <textarea id="metrics" placeholder="Paste optional CSV with columns (any order): url, dr, backlinks, traffic, wordcount"></textarea>
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div class="input" title="Comma-separated keywords you want to also evaluate in bulk (optional)">
+          <span class="muted">Bulk variants:</span><input id="variants" type="text" placeholder="espresso machine under 500, best latte machine, ..." />
+        </div>
+        <div class="input" title="Custom stopwords (prefix with - to remove from stoplist, + to force-keep)">
+          <span class="muted">Stopwords:</span><input id="stop" type="text" placeholder="Optional: add/remove stopwords" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div class="chips">
+          <label class="switch"><input id="useStop" type="checkbox" checked />Use stopwords</label>
+          <label class="switch"><input id="useStem" type="checkbox" />Light stemming</label>
+          <label class="switch"><input id="chkUGC" type="checkbox" checked />Detect UGC/Forums</label>
+          <label class="switch"><input id="chkTypes" type="checkbox" checked />Classify site types</label>
+          <label class="switch"><input id="chkSimilarity" type="checkbox" checked />Title similarity</label>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="status" id="live"><span class="dot"></span><span>Live</span></div>
+      <div>
+        <button class="btn" id="copyBtn">Copy report</button>
+        <button class="btn primary" id="clearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Overview</h2>
+    <div class="body">
+      <div class="metrics">
+        <div class="metric"><div class="k">Difficulty</div><div class="v" id="mDiff">–</div></div>
+        <div class="metric"><div class="k">Intent</div><div class="v" id="mIntent">–</div></div>
+        <div class="metric"><div class="k">SERP strength</div><div class="v" id="mStrength">–</div></div>
+        <div class="metric"><div class="k">Exact in title</div><div class="v" id="mExact">0</div></div>
+        <div class="metric"><div class="k">Keyword in URL</div><div class="v" id="mInURL">0</div></div>
+        <div class="metric"><div class="k">UGC ratio</div><div class="v" id="mUGC">0%</div></div>
+        <div class="metric"><div class="k">Domain diversity</div><div class="v" id="mDomDiv">–</div></div>
+        <div class="metric"><div class="k">Results parsed</div><div class="v" id="mCount">0</div></div>
+      </div>
+      <div class="kv" style="margin-top:10px">
+        <div>
+          <div class="chips" id="intentPills"></div>
+          <div class="muted small">Intent and modifiers extracted from titles.</div>
+        </div>
+        <div>
+          <div class="pctBar"><span id="diffBar" style="width:0%"></span></div>
+          <div class="muted small" id="diffNote">Difficulty blends on‑page signals and site type mix.</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer small">
+      <div>All analysis is local. Difficulty is a heuristic (0–100): higher = harder to rank.</div>
+      <div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Competitors</h2>
+    <div class="body">
+      <div class="grid2">
+        <div>
+          <table id="compTbl">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Title</th>
+                <th>Domain</th>
+                <th>Type</th>
+                <th>Exact</th>
+                <th>In URL</th>
+                <th>Similarity</th>
+                <th>Strength</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div>
+          <canvas id="bar" width="640" height="240"></canvas>
+          <div class="small muted" style="margin-top:6px">Top 10 competitor strength bars; hover not needed — values are annotated.</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer small">
+      <div>Strength factors: exact/partial title match, keyword in URL, site type, optional DR/backlinks, year/freshness.</div>
+      <div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Modifiers and gaps</h2>
+    <div class="body">
+      <div class="chips" id="mods"></div>
+      <div class="row" style="margin-top:8px">
+        <div>
+          <table id="variantsTbl">
+            <thead>
+              <tr><th>Variant</th><th>Coverage</th><th>Note</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div>
+          <table id="gapsTbl">
+            <thead>
+              <tr><th>Opportunity</th><th>Why it matters</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="footer small">
+      <div>Coverage = share of titles that include the variant tokens. Low coverage suggests easier angles.</div>
+      <div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+
+  const els = {
+    kw: $('#kw'), brands: $('#brands'), serp: $('#serp'), metrics: $('#metrics'), variants: $('#variants'),
+    stop: $('#stop'), useStop: $('#useStop'), useStem: $('#useStem'), chkUGC: $('#chkUGC'),
+    chkTypes: $('#chkTypes'), chkSimilarity: $('#chkSimilarity'),
+    mDiff: $('#mDiff'), mIntent: $('#mIntent'), mStrength: $('#mStrength'), mExact: $('#mExact'),
+    mInURL: $('#mInURL'), mUGC: $('#mUGC'), mDomDiv: $('#mDomDiv'), mCount: $('#mCount'),
+    intentPills: $('#intentPills'), diffBar: $('#diffBar'), diffNote: $('#diffNote'),
+    compTbody: $('#compTbl tbody'), mods: $('#mods'), variantsTbody: $('#variantsTbl tbody'),
+    gapsTbody: $('#gapsTbl tbody'), bar: $('#bar'),
+    copyBtn: $('#copyBtn'), clearBtn: $('#clearBtn'), live: $('#live'),
+  };
+
+  // Stopwords (concise)
+  const DEFAULT_STOP = new Set(("a,an,and,are,as,at,be,been,but,by,for,from,had,has,have,he,her,him,his,how,i,if,in,into,is,it,its,just,me,more,most,my,no,not,of,on,or,our,out,over,own,same,she,so,than,that,the,their,them,then,there,these,they,this,those,to,too,up,very,was,we,were,what,when,where,which,while,who,why,with,you,your,vs,vs.,v,s,amp").split(','));
+  const uni = supportsUnicode();
+  const WORD_RE_UNI = /[\p{L}\p{M}\p{N}]+(?:[’'\-][\p{L}\p{M}\p{N}]+)*/gu;
+  const WORD_RE_ASCII = /[A-Za-z0-9]+(?:['\-][A-Za-z0-9]+)*/g;
+
+  function supportsUnicode(){ try{ new RegExp("\\p{L}","u"); return true } catch { return false } }
+  function tokenize(s){
+    const re = uni ? WORD_RE_UNI : WORD_RE_ASCII;
+    return (s.toLowerCase().match(re) || []);
+  }
+  function stripDiacritics(s){ try { return s.normalize('NFD').replace(/\p{M}+/gu,'') } catch { return s } }
+  function lightStem(t){
+    if (t.length < 4) return t;
+    if (t.endsWith("ies")) return t.slice(0,-3)+"y";
+    if (t.endsWith("sses")) return t.slice(0,-2);
+    if (t.endsWith("s") && !t.endsWith("ss")) return t.slice(0,-1);
+    if (t.endsWith("ing") && t.length > 5) return t.slice(0,-3);
+    if (t.endsWith("ed") && t.length > 4) return t.slice(0,-2);
+    return t;
+  }
+  function buildStopset(custom, enabled){
+    if (!enabled) return new Set();
+    const s = new Set(DEFAULT_STOP);
+    (custom||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean).forEach(t=>{
+      if (t.startsWith('+')) s.delete(t.slice(1));
+      else if (t.startsWith('-')) s.add(t.slice(1));
+      else s.add(t);
+    });
+    return s;
+  }
+  function normTokens(s, useStop, useStemFlag, stopset){
+    let toks = tokenize(stripDiacritics(s));
+    if (useStop) toks = toks.filter(t => !stopset.has(t));
+    if (useStemFlag) toks = toks.map(lightStem);
+    return toks;
+  }
+  function jaccard(a,b){
+    const A = new Set(a), B = new Set(b);
+    const inter = [...A].filter(x=>B.has(x)).length;
+    const union = new Set([...A,...B]).size;
+    return union ? inter/union : 0;
+  }
+  function containsOrdered(hay, needle){
+    if (!needle.length) return false;
+    for (let i=0;i<=hay.length-needle.length;i++){
+      let ok = true;
+      for (let j=0;j<needle.length;j++) if (hay[i+j]!==needle[j]){ ok=false; break; }
+      if (ok) return true;
+    }
+    return false;
+  }
+  function domainOf(url){
+    try { return new URL(url).hostname.replace(/^www\./,'') } catch { return '' }
+  }
+  function pathOf(url){
+    try { const u=new URL(url); return (u.pathname+u.search).replace(/\/+/g,'/'); } catch { return '' }
+  }
+
+  // Site type catalog
+  const TYPE_PATTERNS = [
+    {type:'Wikipedia', re:/(^|\.)wikipedia\.org$/i, weight:1.0},
+    {type:'YouTube', re:/(^|\.)youtube\.com$/i, weight:0.9},
+    {type:'Amazon', re:/(^|\.)amazon\./i, weight:0.95},
+    {type:'News', re:/\.(nytimes|guardian|bbc|forbes|bloomberg|wsj|cnn|reuters)\.com$/i, weight:0.9},
+    {type:'E‑commerce', re:/\.(ebay|bestbuy|walmart|target|homedepot|etsy|aliexpress)\.com$/i, weight:0.85},
+    {type:'UGC', re:/\.(reddit\.com|quora\.com|medium\.com|stack(overflow|exchange)\.com|pinterest\.com|producthunt\.com)$/i, weight:0.55},
+    {type:'Docs', re:/\.(readthedocs|github|gitlab)\.io$|(^|\.)github\.com$/i, weight:0.75},
+  ];
+  function classifyDomain(d, chkUGC, chkTypes){
+    if (!d) return {type:'Other', weight:0.7};
+    if (/\.(gov|edu)\b/i.test(d)) return {type:'Gov/Edu', weight:0.95};
+    if (chkTypes){
+      for (const t of TYPE_PATTERNS){
+        if (t.re.test(d)) return {type:t.type, weight:t.weight};
+      }
+    }
+    if (chkUGC && /reddit|quora|medium|forum|community|stack|pinterest/i.test(d)) return {type:'UGC', weight:0.55};
+    return {type:'Other', weight:0.7};
+  }
+
+  // SERP parser: CSV/TSV or heuristic raw
+  function parseTable(text){
+    const t = text.replace(/\r\n/g,'\n').trim();
+    if (!t) return { headers:[], rows:[] };
+    // detect delim
+    const sample = t.split('\n').slice(0,5).join('\n');
+    const counts = { '\t':(sample.match(/\t/g)||[]).length, ',':(sample.match(/,/g)||[]).length, ';':(sample.match(/;/g)||[]).length };
+    const delim = counts['\t']>=counts[','] && counts['\t']>=counts[';'] ? '\t' : (counts[',']>=counts[';'] ? ',' : ';');
+    // quick header guess
+    const hasDelim = counts['\t']+counts[',']+counts[';']>0;
+    if (hasDelim){
+      const rows = [];
+      let cur=[], val='', inQ=false;
+      function pushVal(){ cur.push(val); val=''; }
+      function pushRow(){ rows.push(cur); cur=[]; }
+      for (let i=0;i<t.length;i++){
+        const c = t[i];
+        if (c === '"'){
+          if (inQ && t[i+1]==='"'){ val+='"'; i++; }
+          else inQ = !inQ;
+        } else if (!inQ && (c===delim || c==='\n')){
+          pushVal(); if (c==='\n') pushRow();
+        } else val += c;
+      }
+      pushVal(); if (cur.length) pushRow();
+      const hdrs = rows[0].map(h => h.trim().toLowerCase());
+      const headerLikely = hdrs.some(h => /pos|position|rank|title|url/i.test(h));
+      const headers = headerLikely ? rows.shift().map(h=>h.trim()) : [];
+      return { headers, rows };
+    }
+    // raw heuristic: pair lines URL+title or title+URL
+    const lines = t.split('\n').map(x=>x.trim()).filter(Boolean);
+    const out = [];
+    for (let i=0;i<lines.length;i++){
+      const a = lines[i], b = lines[i+1]||'';
+      if (isURL(a)){ out.push([ '', lines[i+1] ? lines[i+1] : '', a ]); i+=1; }
+      else if (isURL(b)){ out.push([ '', a, b ]); i+=1; }
+      else if (/[A-Za-z]/.test(a)){ // title alone, url missing
+        out.push([ '', a, '' ]);
+      }
+    }
+    return { headers:[], rows: out };
+  }
+  function isURL(s){ return /^https?:\/\/[^\s]+$/i.test(s) }
+
+  function mapSERP(headers, rows){
+    const idx = name => headers.findIndex(h => h.toLowerCase().replace(/\s|_/g,'')===name);
+    const findIdx = (names) => {
+      for (const n of names){
+        const i = headers.findIndex(h => h.toLowerCase().replace(/\s|_/g,'')===n);
+        if (i>=0) return i;
+      }
+      return -1;
+    };
+    const posI = findIdx(['position','pos','rank','#']);
+    const titleI = findIdx(['title','page','name']);
+    const urlI = findIdx(['url','link','href']);
+    const items = rows.map((r,i)=>({
+      pos: +(posI>=0 ? r[posI] : (i+1)),
+      title: (titleI>=0 ? r[titleI] : r[1] || r[0] || '').toString().trim(),
+      url: (urlI>=0 ? r[urlI] : r[2] || '').toString().trim()
+    })).filter(x => x.title || x.url);
+    return items.sort((a,b)=>a.pos-b.pos);
+  }
+
+  function parseMetrics(text){
+    const t = text.replace(/\r\n/g,'\n').trim();
+    if (!t) return new Map();
+    const { headers, rows } = parseTable(t);
+    const idx = name => headers.findIndex(h => h.toLowerCase().replace(/\s|_/g,'')===name);
+    const urlI = idx('url');
+    const drI = idx('dr');
+    const backI = idx('backlinks');
+    const trafI = idx('traffic');
+    const wcI = idx('wordcount');
+    const map = new Map();
+    for (const r of rows){
+      const u = (urlI>=0 ? r[urlI] : r[0] || '').trim();
+      if (!u) continue;
+      map.set(normalizeURL(u), {
+        dr: +(drI>=0 ? r[drI] : 0) || 0,
+        backlinks: +(backI>=0 ? r[backI] : 0) || 0,
+        traffic: +(trafI>=0 ? r[trafI] : 0) || 0,
+        wordcount: +(wcI>=0 ? r[wcI] : 0) || 0,
+      });
+    }
+    return map;
+  }
+  function normalizeURL(u){ try { const x=new URL(u); x.hash=''; x.searchParams.sort(); return x.toString(); } catch { return u.trim() } }
+
+  function intentFromQuery(q){
+    const s = q.toLowerCase();
+    const tokens = tokenize(s);
+    const info = /(what|how|guide|learn|why|ideas|examples|list|best|top|vs|review|comparison|compare|alternatives)/i.test(s);
+    const trans = /(buy|price|cheap|deal|coupon|order|for sale|near me|shipping)/i.test(s);
+    const comm = /(best|top|vs|review|compare|comparison|alternatives|under \d+)/i.test(s);
+    if (trans) return 'Transactional';
+    if (comm) return 'Commercial';
+    if (info) return 'Informational';
+    // fallback by presence of brand names
+    if (tokens.some(t => t.length<=3)) return 'Informational';
+    return 'Informational';
+  }
+
+  function analyze(){
+    const kw = els.kw.value.trim();
+    const brands = (els.brands.value||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
+    const stopset = buildStopset(els.stop.value, els.useStop.checked);
+    const qTokens = normTokens(kw, true, els.useStem.checked, stopset);
+    const tab = parseTable(els.serp.value);
+    const serp = mapSERP(tab.headers, tab.rows);
+    const metrics = parseMetrics(els.metrics.value);
+    const chkUGC = els.chkUGC.checked, chkTypes = els.chkTypes.checked, chkSim = els.chkSimilarity.checked;
+
+    // compute per‑result features
+    const rows = [];
+    const domainCounts = new Map();
+    let exactTitleCount = 0, inURLCount = 0, ugcCount = 0;
+    for (const it of serp){
+      const title = it.title || '';
+      const url = it.url || '';
+      const dom = domainOf(url);
+      domainCounts.set(dom, (domainCounts.get(dom)||0)+1);
+
+      const tTokens = normTokens(title, true, els.useStem.checked, stopset);
+      const pTokens = normTokens(pathOf(url), true, els.useStem.checked, stopset);
+
+      const exactStr = kw.toLowerCase().trim().replace(/\s+/g,' ');
+      const titleStr = title.toLowerCase().replace(/\s+/g,' ');
+      const exactInTitle = exactStr && titleStr.includes(exactStr);
+      if (exactInTitle) exactTitleCount++;
+
+      const inURL = qTokens.length && containsOrdered(pTokens, qTokens);
+      if (inURL) inURLCount++;
+
+      const jac = chkSim ? jaccard(qTokens, tTokens) : 0;
+      const hasYear = /\b(20[1-3]\d)\b/.test(title);
+      const typeInfo = classifyDomain(dom, chkUGC, chkTypes);
+      if (typeInfo.type==='UGC') ugcCount++;
+
+      const brandHit = brands.length ? brands.some(b => dom.includes(b) || title.toLowerCase().includes(b)) : false;
+
+      const m = metrics.get(normalizeURL(url)) || {};
+      const dr = m.dr || 0, backlinks = m.backlinks || 0, wordcount = m.wordcount || 0;
+
+      // strength score (0–1)
+      const strength =
+        (exactInTitle ? 0.24 : 0) +
+        (inURL ? 0.12 : 0) +
+        (jac * 0.22) +
+        (typeInfo.weight * 0.22) +
+        (brandHit ? 0.08 : 0) +
+        (hasYear ? 0.04 : 0) +
+        (sigmoid(dr/100) * 0.05) +
+        (sigmoid(Math.log10(Math.max(1,backlinks))/2) * 0.03);
+
+      rows.push({
+        pos: it.pos,
+        title, url, domain: dom,
+        type: typeInfo.type,
+        exact: exactInTitle,
+        inURL,
+        sim: jac,
+        strength: clamp01(strength),
+        year: hasYear ? (title.match(/\b(20[1-3]\d)\b/)||[])[0] : '',
+        dr, backlinks, wordcount
+      });
+    }
+
+    // difficulty aggregation (0–100)
+    const strengths = rows.map(r=>r.strength).sort((a,b)=>b-a).slice(0,10);
+    const avgTop = strengths.length ? strengths.reduce((a,b)=>a+b,0) / strengths.length : 0;
+    const top3 = strengths.slice(0,3);
+    const top3Avg = top3.length ? top3.reduce((a,b)=>a+b,0)/top3.length : 0;
+
+    const domDiversity = domainCounts.size / Math.max(1, rows.length);
+    const ugcRatio = rows.length ? ugcCount / rows.length : 0;
+
+    let diff = (
+      0.62 * top3Avg +
+      0.28 * avgTop +
+      0.06 * (exactTitleCount / Math.max(1, rows.length)) +
+      0.04 * (inURLCount / Math.max(1, rows.length))
+    );
+    // adjustments
+    diff += (domDiversity < 0.6 ? 0.06 : 0); // low diversity = harder
+    diff -= (ugcRatio > 0.3 ? 0.05 : 0);     // more UGC = easier tendency
+
+    const diff100 = Math.round(clamp01(diff)*100);
+
+    // intent and modifiers
+    const inferredIntent = intentFromQuery(kw || (rows[0]?.title || ''));
+    const allTitles = rows.map(r=>r.title).join(' • ');
+    const tTokensAll = normTokens(allTitles, true, els.useStem.checked, stopset);
+    const mods = topModifiers(tTokensAll, qTokens);
+
+    // variants coverage
+    const varList = (els.variants.value||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const coverage = variantCoverage(varList, rows, stopset);
+
+    // gaps
+    const gaps = buildGaps(rows, qTokens, mods, ugcRatio, domDiversity);
+
+    // render
+    renderOverview({
+      diff100, inferredIntent, avgTop, exactTitleCount, inURLCount, ugcRatio, domDiversity, count: rows.length
+    });
+    renderIntentPills(inferredIntent, mods);
+    renderCompetitors(rows);
+    renderModifiers(mods);
+    renderVariants(coverage);
+    renderGaps(gaps);
+  }
+
+  function sigmoid(x){ return 1/(1+Math.exp(-x)) }
+  function clamp01(x){ return Math.max(0, Math.min(1, x)) }
+
+  function topModifiers(tokens, qTokens){
+    const stop = new Set([...DEFAULT_STOP]);
+    qTokens.forEach(t=>stop.add(t));
+    const freq = new Map();
+    for (const t of tokens){
+      if (stop.has(t)) continue;
+      if (t.length<3) continue;
+      freq.set(t, (freq.get(t)||0)+1);
+    }
+    const top = Array.from(freq.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20);
+    return top.map(([t,c])=>({ term:t, count:c }));
+  }
+
+  function variantCoverage(variants, rows, stopset){
+    return variants.map(v=>{
+      const vt = normTokens(v, true, false, stopset);
+      let hit = 0;
+      for (const r of rows){
+        const tt = normTokens(r.title, true, false, stopset);
+        if (containsOrdered(tt, vt)) hit++;
+      }
+      const cov = rows.length ? hit/rows.length : 0;
+      const note = cov < 0.25 ? 'Low coverage (opportunity)' : (cov < 0.6 ? 'Moderate coverage' : 'Highly saturated');
+      return { variant:v, cov, note };
+    });
+  }
+
+  function buildGaps(rows, qTokens, mods, ugcRatio, domDiversity){
+    const gaps = [];
+    const hasYear = rows.some(r => r.year);
+    if (!hasYear) gaps.push({ opp:'Add freshness (year or updated date)', why:'No year hints in titles; freshness can boost CTR.' });
+    const priceHint = ['price','cost','cheap','under','budget'].some(k => rows.some(r => r.title.toLowerCase().includes(k)));
+    if (!priceHint) gaps.push({ opp:'Price/affordability angle', why:'Titles lack price framing; “under $X” variants may be wide open.' });
+    const vsPresent = rows.some(r => /\bvs\.?|\bversus\b/i.test(r.title));
+    if (!vsPresent) gaps.push({ opp:'Comparison content', why:'“X vs Y” intent seems underserved in current titles.' });
+    if (ugcRatio > 0.3) gaps.push({ opp:'Expert‑driven piece', why:'SERP leans UGC; authoritative guide can stand out.' });
+    if (domDiversity < 0.6) gaps.push({ opp:'Alternative sub‑intent', why:'Low domain diversity; target a different modifier to bypass monopolies.' });
+    // Pull two top modifiers not in query as content sections
+    const extra = mods.filter(m => !qTokens.includes(m.term)).slice(0,3);
+    for (const e of extra){
+      gaps.push({ opp:`Cover “${e.term}” explicitly`, why:'Common modifier in ranking titles — include as H2/section.' });
+    }
+    return gaps.slice(0,8);
+  }
+
+  function renderOverview(m){
+    els.mDiff.textContent = `${m.diff100}`;
+    els.diffBar.style.width = `${m.diff100}%`;
+    els.mIntent.textContent = m.inferredIntent;
+    els.mStrength.textContent = m.avgTop ? (m.avgTop*100).toFixed(0) : '–';
+    els.mExact.textContent = m.exactTitleCount.toString();
+    els.mInURL.textContent = m.inURLCount.toString();
+    els.mUGC.textContent = `${Math.round((m.ugcRatio||0)*100)}%`;
+    els.mDomDiv.textContent = m.domDiversity ? `${Math.round(m.domDiversity*100)}%` : '–';
+    els.mCount.textContent = m.count.toString();
+    els.diffNote.textContent = m.diff100<35?'Easy':'Moderate/Hard';
+    els.diffBar.parentElement.style.setProperty('--barcolor', m.diff100<35?'#22c55e':(m.diff100<65?'#f59e0b':'#ef4444'));
+  }
+
+  function intentColorClass(intent){
+    if (intent==='Informational') return 'int-intent';
+    if (intent==='Commercial') return 'int-comm';
+    if (intent==='Transactional') return 'int-tran';
+    return '';
+  }
+  function renderIntentPills(intent, mods){
+    els.intentPills.innerHTML = `
+      <span class="pill ${intentColorClass(intent)}"><strong>${intent}</strong></span>
+      ${['best','review','vs','price','near','under','guide','ideas'].map(k=>{
+        const hit = mods.some(m => m.term===k);
+        return `<span class="pill"><strong>${k}</strong> ${hit? '• present' : '• missing'}</span>`;
+      }).join('')}
+    `;
+  }
+
+  function fmtPct(p){ return (p*100).toFixed(p*100>=10?0:1)+'%'; }
+  function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  function renderCompetitors(rows){
+    const tbody = rows.slice(0,20).map((r,i)=>{
+      const simPct = Math.round(r.sim*100);
+      const sev = r.strength>0.7?'STRONG':(r.strength>0.45?'MED':'EASY');
+      const strPct = Math.round(r.strength*100);
+      return `<tr>
+        <td>${r.pos}</td>
+        <td>${escapeHtml(r.title)}<div class="muted small">${escapeHtml(r.url)}</div></td>
+        <td>${escapeHtml(r.domain||'')}</td>
+        <td>${escapeHtml(r.type)}</td>
+        <td>${r.exact ? 'Yes' : 'No'}</td>
+        <td>${r.inURL ? 'Yes' : 'No'}</td>
+        <td>
+          <div class="pctBar"><span style="width:${simPct}%"></span></div>
+          <div class="muted small">${simPct}%</div>
+        </td>
+        <td><span class="badge sev-${sev}">${strPct}</span></td>
+      </tr>`;
+    }).join('');
+    els.compTbody.innerHTML = tbody;
+    drawBars(els.bar, rows.slice(0,10).map(r=>({label:(r.domain||'').split('.').slice(-2).join('.'), value:Math.round(r.strength*100)})));
+  }
+
+  function drawBars(canvas, data){
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.fillStyle = '#0f151b'; ctx.fillRect(0,0,W,H);
+    const padL=50,padR=20,padT=10,padB=36;
+    const cw=W-padL-padR, ch=H-padT-padB;
+    ctx.strokeStyle = '#233142'; ctx.strokeRect(padL,padT,cw,ch);
+    const maxVal = Math.max(10, ...data.map(d=>d.value));
+    ctx.fillStyle = '#7c8aa0'; ctx.font = '12px ui-sans-serif';
+    for (let i=0;i<=4;i++){
+      const v = Math.round(maxVal*i/4);
+      const y = padT + ch - ch*i/4;
+      ctx.fillText(v.toString(), 8, y+4);
+      ctx.strokeStyle='rgba(35,49,66,0.6)'; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    }
+    const bars = data.length;
+    const barW = Math.max(8, cw / Math.max(1,bars) * 0.6);
+    const gap = bars ? (cw - bars*barW) / Math.max(1,bars+1) : 0;
+    let x = padL + gap;
+    for (const d of data){
+      const h = ch * (d.value / maxVal);
+      const y = padT + ch - h;
+      const grad = ctx.createLinearGradient(0,y,0,y+h);
+      grad.addColorStop(0,'#6aa3ff'); grad.addColorStop(1,'#9cd1ff');
+      ctx.fillStyle = grad; ctx.fillRect(x,y,barW,h);
+      ctx.fillStyle = '#d7e7ff'; ctx.font = '12px ui-sans-serif'; ctx.textAlign='center';
+      ctx.fillText(String(d.value), x+barW/2, y-4);
+      ctx.save(); ctx.translate(x+barW/2, H-padB+4); ctx.rotate(-Math.PI/6);
+      ctx.fillStyle='#cfe0ff'; ctx.fillText(d.label.length>12?d.label.slice(0,11)+'…':d.label, 0, 0);
+      ctx.restore();
+      x += barW + gap;
+    }
+  }
+
+  function renderModifiers(mods){
+    els.mods.innerHTML = mods.slice(0,24).map(m=>`<span class="pill"><strong>${escapeHtml(m.term)}</strong> ${m.count}</span>`).join('');
+  }
+
+  function renderVariants(cov){
+    els.variantsTbody.innerHTML = cov.map(v=>{
+      return `<tr>
+        <td>${escapeHtml(v.variant)}</td>
+        <td>
+          <div class="pctBar"><span style="width:${Math.round(v.cov*100)}%"></span></div>
+          <div class="muted small">${fmtPct(v.cov)}</div>
+        </td>
+        <td class="muted">${escapeHtml(v.note)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderGaps(gaps){
+    els.gapsTbody.innerHTML = gaps.map(g=>`<tr><td>${escapeHtml(g.opp)}</td><td class="muted">${escapeHtml(g.why)}</td></tr>`).join('');
+  }
+
+  // Copy report
+  els.copyBtn.addEventListener('click', () => {
+    const lines = [];
+    lines.push('== Overview ==');
+    lines.push(`Keyword: ${els.kw.value.trim()}`);
+    lines.push(`Difficulty: ${els.mDiff.textContent} | Intent: ${els.mIntent.textContent}`);
+    lines.push(`SERP strength: ${els.mStrength.textContent} | Exact in title: ${els.mExact.textContent} | In URL: ${els.mInURL.textContent}`);
+    lines.push(`UGC ratio: ${els.mUGC.textContent} | Domain diversity: ${els.mDomDiv.textContent} | Results: ${els.mCount.textContent}`);
+    lines.push('\n== Top competitors ==');
+    $$('#compTbl tbody tr').slice(0,10).forEach(tr=>{
+      const t = [...tr.children].map(td=>td.textContent.trim());
+      lines.push(`${t[0]} | ${t[1]} | ${t[2]} | ${t[3]} | Exact:${t[4]} | URL:${t[5]} | Sim:${t[6]} | Strength:${t[7]}`);
+    });
+    lines.push('\n== Modifiers ==');
+    $$('#mods .pill').forEach(p=>lines.push(p.textContent.trim()));
+    lines.push('\n== Variants ==');
+    $$('#variantsTbl tbody tr').forEach(tr=>{
+      const t=[...tr.children].map(td=>td.textContent.trim()); lines.push(`${t[0]} | Coverage ${t[1]} | ${t[2]}`);
+    });
+    lines.push('\n== Gaps ==');
+    $$('#gapsTbl tbody tr').forEach(tr=>{
+      const t=[...tr.children].map(td=>td.textContent.trim()); lines.push(`${t[0]} — ${t[1]}`);
+    });
+    navigator.clipboard.writeText(lines.join('\n')).then(()=>pulse(true), ()=>pulse(false));
+  });
+
+  function pulse(ok){
+    const el = els.live;
+    el.classList.toggle('warn', !ok);
+    el.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}], {duration:500});
+  }
+
+  // Clear
+  els.clearBtn.addEventListener('click', () => {
+    els.kw.value=''; els.brands.value=''; els.serp.value=''; els.metrics.value=''; els.variants.value='';
+    analyze();
+  });
+
+  // Live
+  ['input','change','keyup','paste'].forEach(evt=>{
+    [els.kw, els.brands, els.serp, els.metrics, els.variants, els.stop, els.useStop, els.useStem, els.chkUGC, els.chkTypes, els.chkSimilarity]
+      .forEach(el=> el.addEventListener(evt, schedule));
+  });
+  let raf=0;
+  function schedule(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(analyze); }
+
+  // Boot with a gentle hint if empty
+  if (!els.serp.value.trim()){
+    els.serp.placeholder += `
+
+Tip: From Google, copy the titles and URLs of top results and paste here.`;
+  }
+  analyze();
+})();
+</script>
+</body>
+</html>
+```
